@@ -1,9 +1,14 @@
 <?php
+
 namespace Lemming\Imageoptimizer;
 
 use TYPO3\CMS\Core\Core\Environment;
+use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\Folder;
+use TYPO3\CMS\Core\Resource\ProcessedFile;
+use TYPO3\CMS\Core\Resource\ProcessedFileRepository;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 class FileAspects
 {
@@ -57,8 +62,42 @@ class FileAspects
      */
     public function processFile($fileProcessingService, $driver, $processedFile)
     {
-        if ($processedFile->isUpdated() === true && !$processedFile->usesOriginalFile()) {
-            $this->service->process(Environment::getPublicPath() . '/' . $processedFile->getPublicUrl(), $processedFile->getExtension());
+        if ($processedFile->isUpdated() === true) {
+            $file = Environment::getPublicPath() . '/' . $processedFile->getPublicUrl();
+            if ($processedFile->usesOriginalFile()) {
+                $file = $processedFile->getForLocalProcessing();
+            }
+
+            $this->service->process($file, $processedFile->getExtension());
+            $this->updateProcessedFile($processedFile, $file);
         }
+    }
+
+    /**
+     * Update the processed file.
+     *
+     * @param \TYPO3\CMS\Core\Resource\ProcessedFile $processedFile
+     */
+    protected function updateProcessedFile(ProcessedFile $processedFile, $file)
+    {
+        /** @var GraphicalFunctions $graphicalFunctions */
+        $graphicalFunctions = GeneralUtility::makeInstance(GraphicalFunctions::class);
+        $imageDimensions = $graphicalFunctions->getImageDimensions($file);
+        $properties = [
+            'width' => $imageDimensions[0],
+            'height' => $imageDimensions[1],
+            'size' => filesize($file),
+            'checksum' => $processedFile->getTask()->getConfigurationChecksum()
+        ];
+        $processedFile->updateProperties($properties);
+        if ($processedFile->usesOriginalFile()) {
+            $processedFile->setName($processedFile->getTask()->getTargetFileName());
+            $processedFile->updateWithLocalFile($file);
+            $processedFile->getTask()->setExecuted(true);
+        }
+
+        /** @var ProcessedFileRepository $processedFileRepository */
+        $processedFileRepository = GeneralUtility::makeInstance(ProcessedFileRepository::class);
+        $processedFileRepository->add($processedFile);
     }
 }
