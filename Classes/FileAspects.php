@@ -68,8 +68,10 @@ class FileAspects
                 $file = $processedFile->getForLocalProcessing();
             }
 
-            $this->service->process($file, $processedFile->getExtension());
-            $this->updateProcessedFile($processedFile, $file);
+            $successful = $this->service->process($file, $processedFile->getExtension());
+            if($successful === true) {
+                $this->updateProcessedFile($processedFile, $file);
+            }
         }
     }
 
