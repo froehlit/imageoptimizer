@@ -3,7 +3,6 @@
 namespace Lemming\Imageoptimizer;
 
 use TYPO3\CMS\Core\Core\Environment;
-use TYPO3\CMS\Core\Imaging\GraphicalFunctions;
 use TYPO3\CMS\Core\Resource\FileInterface;
 use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\ProcessedFile;
@@ -82,12 +81,7 @@ class FileAspects
      */
     protected function updateProcessedFile(ProcessedFile $processedFile, $file)
     {
-        /** @var GraphicalFunctions $graphicalFunctions */
-        $graphicalFunctions = GeneralUtility::makeInstance(GraphicalFunctions::class);
-        $imageDimensions = $graphicalFunctions->getImageDimensions($file);
         $properties = [
-            'width' => $imageDimensions[0],
-            'height' => $imageDimensions[1],
             'size' => filesize($file),
             'checksum' => $processedFile->getTask()->getConfigurationChecksum()
         ];
