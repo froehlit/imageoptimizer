@@ -78,17 +78,18 @@ class FileAspects
      * Update the processed file.
      *
      * @param \TYPO3\CMS\Core\Resource\ProcessedFile $processedFile
+     * @param string $filePath
      */
-    protected function updateProcessedFile(ProcessedFile $processedFile, $file)
+    protected function updateProcessedFile(ProcessedFile $processedFile, $filePath)
     {
         $properties = [
-            'size' => filesize($file),
+            'size' => filesize($filePath),
             'checksum' => $processedFile->getTask()->getConfigurationChecksum()
         ];
         $processedFile->updateProperties($properties);
         if ($processedFile->usesOriginalFile()) {
             $processedFile->setName($processedFile->getTask()->getTargetFileName());
-            $processedFile->updateWithLocalFile($file);
+            $processedFile->updateWithLocalFile($filePath);
             $processedFile->getTask()->setExecuted(true);
         }
 
