@@ -64,13 +64,22 @@ class FileAspects
     {
         if ($processedFile->isUpdated() === true) {
             $file = Environment::getPublicPath() . '/' . $processedFile->getPublicUrl();
+
+            if (!$this->service->canProcess($file, $processedFile->getExtension())) {
+                return;
+            }
+
+            $isTransient = false;
             if ($processedFile->usesOriginalFile()) {
+                $isTransient = true;
                 $file = $processedFile->getForLocalProcessing();
             }
 
             $successful = $this->service->process($file, $processedFile->getExtension());
-            if($successful === true) {
+            if ($successful === true) {
                 $this->updateProcessedFile($processedFile, $file);
+            } elseif ($isTransient && @is_file($file)) {
+                unlink($file);
             }
         }
     }

@@ -37,6 +37,47 @@ class OptimizeImageService implements LoggerAwareInterface
         $this->configuration = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('imageoptimizer');
     }
 
+
+    /**
+     * @param string $file
+     * @param string $extension
+     * @param bool $fileIsUploaded
+     * @param bool $testMode
+     * @return bool
+     */
+    public function canProcess($file, $extension = null, $fileIsUploaded = false, $testMode = false)
+    {
+        $extension = $this->normalizeExtension($file, $extension);
+        $when = $fileIsUploaded === true ? 'Upload' : 'Processing';
+
+        if ((bool)$this->configuration[$extension . 'On' . $when] === false && $testMode === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @param string $file
+     * @param string $extension
+     * @return string
+     */
+    protected function normalizeExtension($file, $extension = null)
+    {
+        if ($extension === null) {
+            $pathinfo = pathinfo($file);
+            if ($pathinfo['extension'] !== null) {
+                $extension = $pathinfo['extension'];
+            }
+        }
+        $extension = strtolower($extension);
+        if ($extension === 'jpeg') {
+            $extension = 'jpg';
+        }
+
+        return $extension;
+    }
+
     /**
      * Perform image optimization
      *
@@ -51,21 +92,10 @@ class OptimizeImageService implements LoggerAwareInterface
     {
         $this->reset();
 
-        if ($extension === null) {
-            $pathinfo = pathinfo($file);
-            if ($pathinfo['extension'] !== null) {
-                $extension = $pathinfo['extension'];
-            }
-        }
-        $extension = strtolower($extension);
-        if ($extension === 'jpeg') {
-            $extension = 'jpg';
-        }
-        $when = $fileIsUploaded === true ? 'Upload' : 'Processing';
-
-        if ((bool)$this->configuration[$extension . 'On' . $when] === false && $testMode === false) {
+        if(!$this->canProcess($file, $extension, $fileIsUploaded, $testMode)) {
             return false;
         }
+        $extension = $this->normalizeExtension($file, $extension);
 
         $binaryName = $this->configuration[$extension . 'Binary'];
         $binary = CommandUtility::getCommand(escapeshellcmd($binaryName));
@@ -81,6 +111,7 @@ class OptimizeImageService implements LoggerAwareInterface
             throw new BinaryNotFoundException('Binary ' . $binaryName . ' not found', 1488631746);
         }
 
+        $when = $fileIsUploaded === true ? 'Upload' : 'Processing';
         $parameters = $this->configuration[$extension . 'ParametersOn' . $when];
         $parameters = preg_replace('/[^A-Za-z0-9-%: =]/', '', $parameters);
         $parameters = preg_replace('/%s/', escapeshellarg($file), $parameters);
